@@ -5,6 +5,32 @@
 # Rusty Llama Webapp
 A simple webapp to showcase the ability to write a simple chatbot webapp using only Rust, TailwindCSS and an Open Source language model such as a variant of GPT, LLaMA, etc.
 
+## Architecture
+
+```mermaid
+graph TD
+    Client[Web Browser] -->|WebSocket| WS_Endpoint(/ws)
+    Client -->|HTTP| HTTP_Endpoint(/)
+    Client -->|HTTP| API_Endpoint(/api/*)
+    
+    subgraph Actix Server
+        HTTP_Endpoint --> StaticFiles(Static Files)
+        HTTP_Endpoint --> LeptosSSR(Leptos SSR)
+        API_Endpoint --> ServerFns(Leptos Server Functions)
+        
+        WS_Endpoint --> WSRoute(api::ws)
+        WSRoute --> |Message Channel| Msg_Handler(Message Handler Task)
+        Msg_Handler --> |Inference Request| Inference_Thread(LLM Inference Thread)
+    end
+    
+    subgraph Local LLM
+        Inference_Thread --> Model(Llama/GGML Model)
+    end
+    
+    Inference_Thread -->|Streamed Tokens| Msg_Handler
+    Msg_Handler -->|WebSocket| Client
+```
+
 ## Setup Instructions
 
 ### Hardware
@@ -40,28 +66,3 @@ To run the project locally,
 <img src="https://raw.githubusercontent.com/Me163/rusty_llama/main/metal_llama.png" />
 </picture>
 
-## Architecture
-
-```mermaid
-graph TD
-    Client[Web Browser] -->|WebSocket| WS_Endpoint(/ws)
-    Client -->|HTTP| HTTP_Endpoint(/)
-    Client -->|HTTP| API_Endpoint(/api/*)
-    
-    subgraph Actix Server
-        HTTP_Endpoint --> StaticFiles(Static Files)
-        HTTP_Endpoint --> LeptosSSR(Leptos SSR)
-        API_Endpoint --> ServerFns(Leptos Server Functions)
-        
-        WS_Endpoint --> WSRoute(api::ws)
-        WSRoute --> |Message Channel| Msg_Handler(Message Handler Task)
-        Msg_Handler --> |Inference Request| Inference_Thread(LLM Inference Thread)
-    end
-    
-    subgraph Local LLM
-        Inference_Thread --> Model(Llama/GGML Model)
-    end
-    
-    Inference_Thread -->|Streamed Tokens| Msg_Handler
-    Msg_Handler -->|WebSocket| Client
-```
